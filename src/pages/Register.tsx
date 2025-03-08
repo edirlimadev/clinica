@@ -36,7 +36,8 @@ export const Register = () => {
     companyName: '',
     businessType: '',
     email: '',
-    password: ''
+    password: '',
+    name: ''
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -52,7 +53,16 @@ export const Register = () => {
     setError(null);
 
     try {
-      // 1. Create company record first
+      // 1. Sign up user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('No user data returned');
+
+      // 2. Create company record
       const { data: companyData, error: companyError } = await supabase
         .from('empresas')
         .insert([
@@ -68,10 +78,23 @@ export const Register = () => {
 
       if (companyError) throw companyError;
 
-      // 2. Create user account
-      await signUp(formData.email, formData.password);
+      // 3. Create user record
+      const { error: userError } = await supabase
+        .from('usuarios')
+        .insert([
+          {
+            id: authData.user.id,
+            nome: formData.name,
+            email: formData.email,
+            empresa_id: companyData.id,
+            funcao: 'admin',
+            ativo: true
+          }
+        ]);
 
-      // 3. Redirect to login
+      if (userError) throw userError;
+
+      // 4. Redirect to login
       navigate('/login', { 
         state: { 
           message: 'Cadastro realizado com sucesso! Por favor, faça login para continuar.' 
@@ -112,6 +135,27 @@ export const Register = () => {
           )}
           
           <form className="space-y-6" onSubmit={handleSubmit}>
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Seu Nome
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Building2 className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Seu nome completo"
+                  value={formData.name}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
             <div>
               <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Nome da Clínica
