@@ -83,7 +83,7 @@ export const Register = () => {
         .from('usuarios')
         .insert([
           {
-            id: authData.user.id,
+            usuario_id: authData.user.id, // Atualize para usar usuario_id
             nome: formData.name,
             email: formData.email,
             empresa_id: companyData.id,
